@@ -12,6 +12,8 @@ class RegionProposalNetwork(nn.Module):
         super(RegionProposalNetwork, self).__init__()
         self.scales = [128, 256, 512]
         self.aspect_ratios = [0.5, 1, 2]
+
+        # 9 anchor boxes in this case
         self.num_anchors = len(self.scales) * len(self.aspect_ratios)
 
         # 3x3 convolution - first layer or RPN
@@ -35,3 +37,40 @@ class RegionProposalNetwork(nn.Module):
                                         kernel_size=1,
                                         stride=1)
 
+    def generate_anchors(self, image, feat):
+        """
+        params:
+        image: dimension (NxCxHxW)
+        feat : dimension (NxCxHxW)
+        """
+        grid_h, grid_w = feat.shape[-2:]
+        img_h, img_w = image.shape[-2:]
+
+        stride_h = torch.tensor(img_h // grid_h,
+                                dtype=torch.int64,
+                                device=feat.device)
+
+        stride_w = torch.tensor(image_w // grid_w,
+                                dtype=torch.int64,
+                                device=feat.device
+                                )
+
+        scales = torch.as_tensor(self.scales,
+                                 dtype=feat.dtype,
+                                 device=feat.device
+                                 )
+
+        aspect_ratios = torch.as_tensor(self.aspect_ratios,
+                                        dtype=feat.dtype,
+                                        device=feat.device
+                                        )
+        pass
+
+    def forward(self, image, feat, target):
+        # Call RPN layers (use chaining since nn.ReLU() returns a function)
+        rpn_feat = nn.ReLU()(self.rpn_conv(feat))
+        cls_scores = self.cls_layer(rpn_feat)
+        box_transform_pred = self.bbox_reg_layer(rpn_feat)
+
+        # Generating the anchors
+        anchors = self.generate_anchors(image, feat)
